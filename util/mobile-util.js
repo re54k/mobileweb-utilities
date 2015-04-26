@@ -7,17 +7,14 @@
  *          该方法会提取 width 值，主动添加 scale 相关属性值。
  *          注意： 如果 meta 标签中指定了 initial-scale， 该方法将不做处理（即不执行）。
  *      2. REM: 不用写 meta 标签，该方法根据 dpr 自动生成，并在 html 标签中加上 data-dpr 和 font-size 两个属性值。
- *          该方法约束：页面最大宽度 = 750，最大 dpr = 3，安卓系统 dpr = 1，REM 换算比例值 16。
+ *          该方法约束：IOS 系统最大 dpr = 3，其它系统 dpr = 1，页面每 dpr 最大宽度（即页面宽度/dpr） = 750，REM 换算比值为 16。
  *          对应 css 开发，任何弹性尺寸均使用 rem 单位，rem 默认宽度为 视觉稿宽度 / 16;
- *              scss 中 $ppr(pixel per rem) 变量写法： $ppr: 750px/16px/1rem; 元素尺寸写法 width: 100/$ppr。
- *
- * getSearch 方法主要用来转换页面参数值
- *      @param href {String | Default: location.href}
- *      @return {Object} 返回转换后的键值对
+ *              scss 中 $ppr(pixel per rem) 变量写法 -- $ppr: 750px/16/1rem;
+ *                      元素尺寸写法 -- html { font-size: $ppr*1rem; } body { width: 750px/$ppr; }。
+
  */
 window.mobileUtil = (function(win, doc) {
-	var docEl = doc.documentElement,
-        UA = navigator.userAgent,
+	var UA = navigator.userAgent,
 		isAndroid = /android|adr/gi.test(UA),
 		isIos = /iphone|ipod|ipad/gi.test(UA) && !isAndroid, // 据说某些国产机的UA会同时包含 android iphone 字符
 		isMobile = isAndroid || isIos;  // 粗略的判断
@@ -46,26 +43,23 @@ window.mobileUtil = (function(win, doc) {
 			    matchWidth = metaCtt.match(/width=([^,\s]+)/);
 
             if ( !metaEl ) { // REM
-                var dpr = isIos ? Math.min(win.devicePixelRatio, 3) : 1,
+                var docEl = doc.documentElement,
+                    maxwidth = docEl.dataset.mw || 750, // 每 dpr 最大页面宽度
+                    dpr = isIos ? Math.min(win.devicePixelRatio, 3) : 1,
                     scale = 1 / dpr,
                     tid;
 
-                docEl.setAttribute('data-dpr', dpr);
+                docEl.removeAttribute('data-mw');
+                docEl.dataset.dpr = dpr;
                 metaEl = doc.createElement('meta');
-                metaEl.setAttribute('name', 'viewport');
-                metaEl.setAttribute('content', 'initial-scale=' + scale + ', maximum-scale=' + scale + ', minimum-scale=' + scale + ', user-scalable=no');
-                if (docEl.firstElementChild) {
-                    docEl.firstElementChild.appendChild(metaEl);
-                } else {
-                    var wrap = doc.createElement('div');
-                    wrap.appendChild(metaEl);
-                    doc.write(wrap.innerHTML);
-                }
+                metaEl.name = 'viewport';
+                metaEl.content = fillScale(scale);
+                docEl.firstElementChild.appendChild(metaEl);
 
                 var refreshRem = function() {
                     var width = docEl.getBoundingClientRect().width;
-                    if (width / dpr > 750) {
-                        width = 750 * dpr;
+                    if (width / dpr > maxwidth) {
+                        width = maxwidth * dpr;
                     }
                     var rem = width / 16;
                     docEl.style.fontSize = rem + 'px';
@@ -83,7 +77,7 @@ window.mobileUtil = (function(win, doc) {
                 }, false);
 
                 refreshRem();
-            } else if ( !matchScale && ( matchWidth && matchWidth[1] != 'device-width' ) ) { // 定宽
+            } else if ( isMobile && !matchScale && ( matchWidth && matchWidth[1] != 'device-width' ) ) { // 定宽
                 var	width = parseInt(matchWidth[1]),
                     iw = win.innerWidth || width,
                     ow = win.outerWidth || iw,
@@ -94,15 +88,15 @@ window.mobileUtil = (function(win, doc) {
                     ish = win.screen.height || ih,
                     sah = win.screen.availHeight || ih,
                     w = Math.min(iw,ow,sw,saw,ih,oh,ish,sah),
-                    ratio = w / width,
-                    ctt;
+                    scale = w / width;
 
-                ratio = Math.min(ratio, win.devicePixelRatio);
-                if ( isAndroid && ratio < 1) {
-                    ctt = ',initial-scale=' + ratio + ',maximum-scale=' + ratio;
+                if ( scale < 1 ) {
+                    metaEl.content = metaCtt + ',' + fillScale(scale);
                 }
+            }
 
-                metaEl.content += ctt + ',user-scalable=no';
+            function fillScale(scale) {
+                return 'initial-scale=' + scale + ',maximum-scale=' + scale + ',minimum-scale=' + scale + ',user-scalable=no';
             }
 		},
 
