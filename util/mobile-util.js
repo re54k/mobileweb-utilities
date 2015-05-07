@@ -3,7 +3,7 @@
  * 该 JS 应在 head 中尽可能早的引入，减少重绘。
  *
  * fixScreen 方法根据两种情况适配，该方法自动执行。
- *      1. 定宽： 对应 meta 标签写法 -- <meta name="viewport" content="width=750">
+ *      1. 定宽： 对应 meta 标签写法 -- <meta name="viewport" content="target-densitydpi=device-dpi,width=750">
  *          该方法会提取 width 值，主动添加 scale 相关属性值。
  *          注意： 如果 meta 标签中指定了 initial-scale， 该方法将不做处理（即不执行）。
  *      2. REM: 不用写 meta 标签，该方法根据 dpr 自动生成，并在 html 标签中加上 data-dpr 和 font-size 两个属性值。
@@ -96,7 +96,7 @@ window.mobileUtil = (function(win, doc) {
             }
 
             function fillScale(scale) {
-                return 'initial-scale=' + scale + ',maximum-scale=' + scale + ',minimum-scale=' + scale + ',user-scalable=no';
+                return 'initial-scale=' + scale + ',maximum-scale=' + scale + ',minimum-scale=' + scale;
             }
 		},
 
